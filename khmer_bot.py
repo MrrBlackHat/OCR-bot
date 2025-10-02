@@ -4,7 +4,7 @@ import sys
 import re
 import subprocess
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ExtBot 
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes  # Removed ExtBot
 from PIL import Image
 import pytesseract
 import io
@@ -26,37 +26,37 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configure Tesseract for Windows (Crucial path configuration kept)
-TESSERACT_PATH = "/usr/bin/tesseract"  # Linux path for Render
+# Configure Tesseract for Render
+TESSERACT_PATH = "/usr/bin/tesseract"
 try:
     pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
     logger.info(f"Tesseract path successfully set to: {TESSERACT_PATH}") 
-except Exception:
-    logger.warning(f"Could not set tesseract_cmd to {TESSERACT_PATH}. Ensure Tesseract is in system PATH.")
+except Exception as e:
+    logger.warning(f"Could not set tesseract_cmd to {TESSERACT_PATH}. Error: {e}")
 
-# Universal Khmer Character Set (Kept same)
+# Universal Khmer Character Set
 KHMER_CHAR_SET = "កខគឃងចឆជឈញដឋឌឍណតថទធនបផពភមយរលវឝឞសហឡអឣឤឥឦឧឨឩឪឫឬឭឮឯឰឱឲឳ្ៈាេឹីុូួើឿៀេែៃោៅំុំះ៉៊៌៍៎៏័៑ៗ៕៖។០១២៣៤៥៦៧៨៩"
 ENGLISH_CHAR_SET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 NUMBERS_PUNCTUATION_SYMBOLS = r" .,!?;:-+()[]{}<>/=MDSDtpFANOVA0123456789"
 WHITELIST_CHARS = ENGLISH_CHAR_SET + KHMER_CHAR_SET + NUMBERS_PUNCTUATION_SYMBOLS
 
-# Constants for better readability
+# Constants
 MAX_PDF_PAGES = 5 
-MAX_MESSAGE_LENGTH = 4096 # Telegram message limit
+MAX_MESSAGE_LENGTH = 4096
 
 class UniversalKhmerTextExtractorBot:
     def __init__(self, token: str):
         self.token = token
         self.application = Application.builder().token(token).build()
         
-        # --- Add handlers (Fixed: handlers must match existing methods) ---
+        # Add handlers
         self.application.add_handler(CommandHandler("start", self.start_command))
         self.application.add_handler(CommandHandler("help", self.help_command))
         self.application.add_handler(CommandHandler("tips", self.tips_command))
         self.application.add_handler(CommandHandler("languages", self.languages_command))
         self.application.add_handler(MessageHandler(filters.PHOTO, self.handle_image))
         self.application.add_handler(MessageHandler(filters.Document.PDF, self.handle_document)) 
-        self.application.add_handler(MessageHandler(filters.Document.ALL & ~filters.Document.PDF, self.handle_unsupported_document)) # Reject non-PDF documents
+        self.application.add_handler(MessageHandler(filters.Document.ALL & ~filters.Document.PDF, self.handle_unsupported_document))
         
         self.universal_correction_patterns = self._initialize_universal_corrections()
         
@@ -73,7 +73,7 @@ class UniversalKhmerTextExtractorBot:
             'l': '1', 'O': '0', 'o': '0', '|': '1', 'i': '1',
             '?': '.', '១': '1', '០': '0',
             
-            # Punctuation/Spacing fixes (retained for robustness)
+            # Punctuation/Spacing fixes
             ' .': '.', ' ,': ',', ' ;': ';', ' :': ':',
         }
         
@@ -266,8 +266,8 @@ class UniversalKhmerTextExtractorBot:
         text = re.sub(r'\b(SPSS|SPS|ស20030)\b', 'SPSS', text)
         text = re.sub(r'\b(ANOVA|ANVOA|សាព្ង)\b', 'ANOVA', text)
         
-        # 2. Fix M=SD= statistical string errors
-        text = re.sub(r'([M|m]=[\s]*[\d.]+)\s*\(\s*(S|s|$)D[\s]*=[\s]*([\d.]+)\s*\)', r'\1 (SD=\3)', text)
+        # 2. Fix M=SD= statistical string errors (CORRECTED)
+        text = re.sub(r'([Mm]=[\s]*[\d.]+)\s*\(\s*([Ss]|$)D[\s]*=[\s]*([\d.]+)\s*\)', r'\1 (SD=\3)', text)
         
         # 3. New English-specific character fixes (i.e., '1' misread as 'l' in numerical context)
         text = re.sub(r'([M|S|D|m|s|d|=])\s*l\s*(\d)', r'\1\2', text) 
@@ -313,15 +313,18 @@ class UniversalKhmerTextExtractorBot:
             if extracted_text:
                 result = "\n\n".join(extracted_text)
                 
-                # Check if the PDF was truncated (only check if we got MAX_PDF_PAGES)
+                # Check if the PDF was truncated (IMPROVED VERSION)
                 if len(images) == MAX_PDF_PAGES:
-                    # Quick check to see if the PDF has more pages than we processed
                     try:
-                        total_pages = len(convert_from_bytes(pdf_bytes, first_page=1, last_page=9999, fmt='ppm', thread_count=1))
+                        # More efficient way to count PDF pages
+                        from pdf2image import pdfinfo_from_bytes
+                        info = pdfinfo_from_bytes(pdf_bytes)
+                        total_pages = info["Pages"]
                         if total_pages > MAX_PDF_PAGES:
-                            result += f"\n\n... and more pages were skipped (limit {MAX_PDF_PAGES} pages for speed)."
+                            result += f"\n\n... and {total_pages - MAX_PDF_PAGES} more pages were skipped (limit {MAX_PDF_PAGES} pages for speed)."
                     except Exception as e:
-                        logger.warning(f"Could not reliably count total PDF pages: {e}")
+                        logger.warning(f"Could not count PDF pages: {e}")
+                        result += f"\n\n... and more pages may have been skipped (limit {MAX_PDF_PAGES} pages)."
 
                 return result
             else:
@@ -417,7 +420,7 @@ class UniversalKhmerTextExtractorBot:
             "Please send your document as an image or a PDF."
         )
 
-    # --- Utility Command Handlers (THESE WERE MISSING, NOW ADDED BACK) ---
+    # --- Utility Command Handlers ---
 
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Send welcome message when the command /start is issued."""
@@ -526,14 +529,11 @@ def main():
     print("  • Universal error correction")
     print("=" * 60)
     
-    # Use environment variable first, then prompt
+    # Use environment variable
     BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     if not BOT_TOKEN:
-        print("\n🔑 Enter your Telegram Bot Token:")
-        BOT_TOKEN = input("Bot Token: ").strip()
-    
-    if not BOT_TOKEN:
-        print("❌ No token provided. Exiting.")
+        print("❌ No TELEGRAM_BOT_TOKEN environment variable found.")
+        print("Please set it in Render environment variables.")
         return
     
     bot = UniversalKhmerTextExtractorBot(BOT_TOKEN)
@@ -542,7 +542,9 @@ def main():
         bot.run()
     except KeyboardInterrupt:
         print("\n👋 Bot stopped")
+    except Exception as e:
+        logger.error(f"Bot crashed: {e}")
+        print(f"❌ Bot crashed: {e}")
 
 if __name__ == "__main__":
     main()
-
