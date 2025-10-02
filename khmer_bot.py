@@ -27,7 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Configure Tesseract for Windows (Crucial path configuration kept)
-TESSERACT_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+TESSERACT_PATH = "/usr/bin/tesseract"  # Linux path for Render
 try:
     pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
     logger.info(f"Tesseract path successfully set to: {TESSERACT_PATH}") 
@@ -545,3 +545,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
