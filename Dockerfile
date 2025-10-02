@@ -17,7 +17,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy ALL application files
 COPY . .
 
 # Create necessary directories and set permissions
@@ -26,5 +26,5 @@ RUN mkdir -p /var/tmp && chmod 755 /var/tmp
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 
-# Run the application
-CMD ["python", "khmer_bot"]
+# Run the application - FIXED: Use correct filename
+CMD ["python", "khmer_bot.py"]
