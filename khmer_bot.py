@@ -27,7 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Configure Tesseract for Windows (Crucial path configuration kept)
-TESSERACT_PATH = "/usr/bin/tesseract"  # Linux path for Render
+TESSERACT_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 try:
     pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
     logger.info(f"Tesseract path successfully set to: {TESSERACT_PATH}") 
@@ -355,7 +355,7 @@ class UniversalKhmerTextExtractorBot:
             photo_bytes = await photo_file.download_as_bytearray()
             image = Image.open(io.BytesIO(photo_bytes))
             
-            await update.message.reply_text("🌍 Processing with universal Khmer-English OCR...")
+            await update.message.reply_text("រង់ចាំបន្តិចសិនណាកូនប្រុស កូនស្រី😁...")
             extracted_text = self.extract_text_universal(image)
             
             if extracted_text and "No readable text" not in extracted_text:
@@ -366,7 +366,7 @@ class UniversalKhmerTextExtractorBot:
                     "📝 **Extracted Text:**\n\n"
                 )
                 
-                await update.message.reply_text("✅ Text extraction completed! 🌟")
+                await update.message.reply_text("អាចមានខុសបន្តិចបន្តួច ពិនិត្យហើយកែតម្រូវសិនណាកូនប៉ាៗ💋")
             else:
                 await update.message.reply_text(
                     "❌ No readable text detected.\n\n"
